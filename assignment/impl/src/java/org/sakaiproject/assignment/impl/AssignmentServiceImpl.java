@@ -331,8 +331,8 @@ public class AssignmentServiceImpl implements AssignmentService, EntityTransferr
     			mergeAssignment(assignmentElement);
     			assignmentsMerged++;
     		} catch (Exception e) {
-    			final String error = "could not merge assignment with id: " + assignmentElement.getFirstChild().getNodeValue();
-    			log.warn(error, e);
+    			final String error = "could not merge assignment with id: " + assignmentElement.getFirstChild().getFirstChild().getNodeValue() + LINE_SEPARATOR;
+    			log.error(error, e);
     			results.append(error);
     		}
     	}
