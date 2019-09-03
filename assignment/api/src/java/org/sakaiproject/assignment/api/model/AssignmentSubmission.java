@@ -89,7 +89,7 @@ public class AssignmentSubmission {
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
     @OneToMany(mappedBy = "submission", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     @BatchSize(size = 100)
-    @JsonBackReference
+    @JsonManagedReference
     private Set<AssignmentSubmissionSubmitter> submitters = new HashSet<>();
 
     //private List submissionLog;

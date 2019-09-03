@@ -795,10 +795,14 @@ public class AssignmentServiceImpl implements AssignmentService, EntityTransferr
     @Override
     @Transactional
     public Assignment mergeAssignment(final Element element) throws IdInvalidException, IdUsedException, PermissionException, TransformerException {
-        // TODO need to write a test for this
         // this may also need to handle submission serialization?
     	final String xml = NodeToStringUtility.toString(element);
     	final Assignment assignmentFromXml = assignmentRepository.fromXML(xml);
+    	assignmentFromXml.setId(null);
+    	CollectionUtils.emptyIfNull(assignmentFromXml.getSubmissions()).stream().forEach(submission -> {
+            submission.setId(null);
+            CollectionUtils.emptyIfNull(submission.getSubmitters()).stream().forEach(submitter -> submitter.setId(null));
+    	});
     	addAssignment(assignmentFromXml);
     	return assignmentFromXml;
     }

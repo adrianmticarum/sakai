@@ -973,6 +973,9 @@ public class AssignmentServiceTest extends AbstractTransactionalJUnit4SpringCont
         final String fileName = getClass().getClassLoader().getResource("importAssignment.xml").getPath();
         final Document doc = Xml.readDocument(fileName);
         final String idAssignment = "12345678-abcd-1234-abcd-123456789abc";
+
+        final Collection<Assignment> assignmentBeforeMerge = assignmentService.getAssignmentsForContext(siteId);
+
         if (doc != null) {
             // Mock everything needed to have permission
             mockingForPermissionsArchiveMerge(siteId);
@@ -991,22 +994,9 @@ public class AssignmentServiceTest extends AbstractTransactionalJUnit4SpringCont
                 log.info("testMerge element: " + element.getTagName());
                 // look for site stuff
                 if ("org.sakaiproject.assignment.api.AssignmentService".equals(element.getTagName())) {
-                    Assignment assignment = null;
-                    try {
-                        assignment = assignmentService.getAssignment(idAssignment);
-                        Assert.assertNotNull(assignment);
-                    } catch (IdUnusedException e) {
-                        Assert.assertNull(assignment);
-                    }
-
                     assignmentService.merge(siteId, element, null, null, null, null, null);
-
-                    try {
-                        assignment = assignmentService.getAssignment(idAssignment);
-                        Assert.assertNotNull(assignment);
-                    } catch (IdUnusedException e) {
-                        Assert.fail();
-                    }
+                    final Collection<Assignment> assignmentAfterMerge = assignmentService.getAssignmentsForContext(siteId);
+                    Assert.assertEquals(assignmentBeforeMerge.size(), assignmentAfterMerge.size() - 1 );
                 }
             }
         }
