@@ -19,8 +19,13 @@ import java.io.Serializable;
 import java.util.List;
 import javax.persistence.*;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.sakaiproject.assignment.api.AssignmentConstants;
 import org.sakaiproject.entity.api.Reference;
 
@@ -29,17 +34,19 @@ import org.sakaiproject.entity.api.Reference;
        indexes = {@Index(name = "PEER_ASSESSOR2_I", columnList = "ASSIGNMENT_ID, ASSESSOR_USER_ID")})
 @NamedQueries({
         @NamedQuery(name = "findPeerAssessmentItemsBySubmissions",
-                    query = "from PeerAssessmentItem p where p.id.submissionId in (:submissionIds) order by p.assignmentId, p.id.submissionId, p.id.assessorUserId"),
+                query = "from PeerAssessmentItem p where p.id.submissionId in (:submissionIds) order by p.assignment.id, p.id.submissionId, p.id.assessorUserId"),
         @NamedQuery(name = "findPeerAssessmentItemsByUserAndAssignment",
-                    query = "from PeerAssessmentItem p where p.id.assessorUserId = :assessorUserId and p.assignmentId = :assignmentId order by p.assignmentId, p.id.submissionId, p.id.assessorUserId"),
+                query = "from PeerAssessmentItem p where p.id.assessorUserId = :assessorUserId and p.assignment.id = :assignmentId order by p.assignment.id, p.id.submissionId, p.id.assessorUserId"),
         @NamedQuery(name = "findPeerAssessmentItemsByUserAndSubmission",
-                    query = "from PeerAssessmentItem p where p.id.assessorUserId = :assessorUserId and p.id.submissionId = :submissionId order by p.assignmentId, p.id.submissionId, p.id.assessorUserId"),
+                query = "from PeerAssessmentItem p where p.id.assessorUserId = :assessorUserId and p.id.submissionId = :submissionId order by p.assignment.id, p.id.submissionId, p.id.assessorUserId"),
         @NamedQuery(name = "findPeerAssessmentItemsBySubmissionId",
-                    query = "from PeerAssessmentItem p where p.id.submissionId = :submissionId	order by p.assignmentId, p.id.submissionId, p.id.assessorUserId"),
+                query = "from PeerAssessmentItem p where p.id.submissionId = :submissionId	order by p.assignment.id, p.id.submissionId, p.id.assessorUserId"),
         @NamedQuery(name = "findPeerAssessmentItemsByAssignmentId",
-                    query = "from PeerAssessmentItem p where p.assignmentId = :assignmentId order by p.assignmentId, p.id.submissionId, p.id.assessorUserId")})
+                query = "from PeerAssessmentItem p where p.assignment.id = :assignmentId order by p.assignment.id, p.id.submissionId, p.id.assessorUserId")})
 @Data
 @NoArgsConstructor
+@ToString(exclude = {"assignment"})
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 public class PeerAssessmentItem implements Serializable {
 
     private static final long serialVersionUID = -8376570648172966170L;
@@ -47,8 +54,10 @@ public class PeerAssessmentItem implements Serializable {
     @EmbeddedId
     private AssessorSubmissionId id;
 
-    @Column(name = "ASSIGNMENT_ID", nullable = false)
-    private String assignmentId;
+    @ManyToOne
+    @JoinColumn(name = "ASSIGNMENT_ID")
+    @JsonBackReference
+    private Assignment assignment;
 
     @Column(name = "SCORE")
     private Integer score;
@@ -84,11 +93,13 @@ public class PeerAssessmentItem implements Serializable {
      * @return
      */
     @Transient
+    @JsonIgnore
     public String getScoreDisplay() {
         return getScore() == null ? "" : "" + score / (double) getScaledFactor();
     }
 
     @Transient
+    @JsonIgnore
     public boolean isDraft() {
         return !submitted && (getScore() != null || (getComment() != null && !"".equals(getComment().trim())));
     }

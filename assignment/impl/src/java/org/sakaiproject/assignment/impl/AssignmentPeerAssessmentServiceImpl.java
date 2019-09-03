@@ -202,7 +202,7 @@ public class AssignmentPeerAssessmentServiceImpl extends HibernateDaoSupport imp
                             }
                             PeerAssessmentItem newItem = new PeerAssessmentItem();
                             newItem.setId(new AssessorSubmissionId(submissionId, lowestAssignedAssessor));
-                            newItem.setAssignmentId(assignment.getId());
+                            newItem.setAssignment(assignment);
                             newItems.add(newItem);
                             assessorsAssessmentMap.put(submissionId, newItem);
                             assignedAssessmentsMap.put(lowestAssignedAssessor, assessorsAssessmentMap);

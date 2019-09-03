@@ -99,7 +99,7 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 })
 @Data
 @NoArgsConstructor
-@ToString(exclude = {"authors", "submissions", "groups", "properties", "attachments"})
+@ToString(exclude = {"authors", "submissions", "peerAssessmentItems", "groups", "properties", "attachments"})
 @EqualsAndHashCode(of = "id")
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 public class Assignment {
@@ -175,6 +175,10 @@ public class Assignment {
     @OneToMany(mappedBy = "assignment", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private Set<AssignmentSubmission> submissions = new HashSet<>();
+
+    @OneToMany(mappedBy = "assignment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private Set<PeerAssessmentItem> peerAssessmentItems = new HashSet<>();
 
     @Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
     @ElementCollection
