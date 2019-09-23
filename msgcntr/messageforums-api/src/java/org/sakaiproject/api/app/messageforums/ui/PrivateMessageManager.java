@@ -39,6 +39,7 @@ public interface PrivateMessageManager {
     
     public static String SORT_COLUMN_SUBJECT = "title";
     public static String SORT_COLUMN_AUTHOR = "author";
+    public static String SORT_COLUMN_GROUP = "group";
     public static String SORT_COLUMN_DATE = "message.created";
     public static String SORT_COLUMN_LABEL = "label";
     public static String SORT_COLUMN_TO = "message.recipientsAsText";

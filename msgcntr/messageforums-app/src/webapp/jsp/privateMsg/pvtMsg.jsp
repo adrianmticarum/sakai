@@ -146,6 +146,26 @@
 		     <h:outputText value="#{rcvdItems.msg.author}" rendered="#{rcvdItems.hasRead}"/>
 		     <h:outputText styleClass="unreadMsg" value="#{rcvdItems.msg.author}" rendered="#{!rcvdItems.hasRead}"/>
 		  </h:column>
+
+		  <h:column rendered="#{PrivateMessagesTool.selectedTopic.topic.title != 'pvt_sent'}">
+			  <f:facet name="header">
+				  <h:commandLink value="#{msgs.pvt_group}"
+								 title="#{msgs.sort_group}">
+					  <h:graphicImage value="/images/sortascending.gif" style="border:0"
+									  title="#{msgs.sort_group_asc}" alt="#{msgs.sort_group_asc}"
+									  rendered="#{PrivateMessagesTool.sortType == 'group_asc'}"/>
+					  <h:graphicImage value="/images/sortdescending.gif" style="border:0"
+									  title="#{msgs.sort_group_desc}" alt="#{msgs.sort_group_desc}"
+									  rendered="#{PrivateMessagesTool.sortType == 'group_desc'}"/>
+					  <f:param name="sortColumn" value="group"/>
+				  </h:commandLink>
+			  </f:facet>
+			  <h:outputText value="eeeeeee - #{PrivateMessagesTool.getGroupByUserId(rcvdItems.msg.authorId)}"
+							rendered="#{rcvdItems.hasRead}"/>
+			  <h:outputText styleClass="unreadMsg" value="eeeeeee - #{PrivateMessagesTool.getGroupByUserId(rcvdItems.msg.authorId)}"
+							rendered="#{!rcvdItems.hasRead}"/>
+		  </h:column>
+
 		  		  <h:column rendered="#{PrivateMessagesTool.selectedTopic.topic.title != 'pvt_received' && 
 		  PrivateMessagesTool.selectedTopic.topic.title != 'pvt_drafts' &&
 		  PrivateMessagesTool.selectedTopic.topic.title != 'pvt_deleted' }">
