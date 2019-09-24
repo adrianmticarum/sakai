@@ -67,6 +67,7 @@ import org.sakaiproject.api.app.messageforums.SynopticMsgcntrManager;
 import org.sakaiproject.api.app.messageforums.Topic;
 import org.sakaiproject.api.app.messageforums.UserPreferencesManager;
 import org.sakaiproject.api.app.messageforums.ui.PrivateMessageManager;
+import org.sakaiproject.authz.api.AuthzGroupService;
 import org.sakaiproject.authz.api.Member;
 import org.sakaiproject.authz.api.PermissionsHelper;
 import org.sakaiproject.authz.api.SecurityService;
@@ -201,6 +202,8 @@ public class PrivateMessagesTool
   @Setter
   private SiteService siteService;
   @Setter
+  private AuthzGroupService authzGroupService;
+  @Setter
   private SessionManager sessionManager;
   @Setter
   private UserTimeService userTimeService;
@@ -285,9 +288,9 @@ public class PrivateMessagesTool
   
   //Compose Screen-webpage
   @Getter @Setter
-  private List selectedComposeToList = new ArrayList();
+  private List<String> selectedComposeToList = new ArrayList<>();
   @Getter @Setter
-  private List selectedComposeBccList = new ArrayList();
+  private List<String> selectedComposeBccList = new ArrayList<>();
   @Getter @Setter
   private String composeSendAsPvtMsg=SET_AS_YES; // currently set as Default as change by user is allowed
   @Getter @Setter
@@ -299,12 +302,10 @@ public class PrivateMessagesTool
   @Getter @Setter
   private String selectedLabel="pvt_priority_normal" ;   //defautl set
   @Getter @Setter
-  private List totalComposeToList = null;
+  private List<MembershipItem> totalComposeToList = null;
   @Getter @Setter
-  private List totalComposeToBccList = null;
-  @Getter @Setter
-  private List totalComposeToListRecipients;
-  
+  private List<MembershipItem> totalComposeToBccList = null;
+
   //Delete items - Checkbox display and selection - Multiple delete
   @Getter @Setter
   private List selectedDeleteItems;
@@ -373,26 +374,18 @@ public class PrivateMessagesTool
 
   public static final String SORT_DATE_DESC = "date_desc";
 
-  private boolean selectedComposedlistequalCurrentuser=false;
-  
   /** sort member */
   private String sortType = SORT_DATE_DESC;
   
   private int setDetailMsgCount = 0;
-  
-  private static final String PERMISSIONS_PREFIX = "msg.";
-  
-  private boolean instructor = false;
-  
-  private List<SelectItem> nonHiddenGroups = new ArrayList<SelectItem>();
-  private List<HiddenGroup> hiddenGroups = new ArrayList();
+
+  private List<HiddenGroup> hiddenGroups = new ArrayList<>();
   private static final String DEFAULT_NON_HIDDEN_GROUP_ID = "-1";
   private String DEFAULT_NON_HIDDEN_GROUP_TITLE = "hiddenGroups_selectGroup";
   private String selectedNonHiddenGroup = DEFAULT_NON_HIDDEN_GROUP_ID;
   private static final String PARAM_GROUP_ID = "groupId";
-  private boolean currentSiteHasGroups = false;
   private Boolean displayHiddenGroupsMsg = null;
-  
+
   @Getter
   private boolean showProfileInfoMsg = false;
   @Getter
@@ -427,7 +420,7 @@ public class PrivateMessagesTool
       sendToEmail = area.getSendToEmail() + "";
       forwardPvtMsg = (Boolean.TRUE.equals(pf.getAutoForward())) ? SET_AS_YES : SET_AS_NO;
       forwardPvtMsgEmail = pf.getAutoForwardEmail();
-      hiddenGroups = new ArrayList<HiddenGroup>();
+      hiddenGroups = new ArrayList<>();
       if(area != null && area.getHiddenGroups() != null){
           hiddenGroups.addAll(area.getHiddenGroups());
       }
@@ -525,7 +518,7 @@ public class PrivateMessagesTool
     	//MSGCNTR-472 we need the first three but need to guard against there being < 3 elements
         for (int i = 0;i < 3 && iterator.hasNext(); i++)//only three times
         {
-          PrivateTopic topic = (PrivateTopic) iterator.next();
+          PrivateTopic topic = iterator.next();
           
           if (topic != null)
           {
@@ -555,7 +548,7 @@ public class PrivateMessagesTool
         
         while(iterator.hasNext())//add more folders 
         {
-               PrivateTopic topic = (PrivateTopic) iterator.next();
+               PrivateTopic topic = iterator.next();
                if (topic != null)
                {
 
@@ -640,7 +633,7 @@ public class PrivateMessagesTool
 	if (msgNavMode == null)
 	{//=======Recibidios by huxt
 		msgNavMode = (getExternalParameterByKey(EXTERNAL_WHICH_TOPIC) == null) ? //"selectedTopic"
-						forumManager.getTopicByUuid(getExternalParameterByKey(EXTERNAL_TOPIC_ID)).getTitle() ://"pvtMsgTopicid"
+						forumManager.getTopicByUuid(getExternalParameterByKey(EXTERNAL_TOPIC_ID)).getTitle() ://EXTERNAL_TOPIC_ID
 						getExternalParameterByKey(EXTERNAL_WHICH_TOPIC);
 	}
 
@@ -720,31 +713,19 @@ public class PrivateMessagesTool
 	 return "/site/" + toolManager.getCurrentPlacement().getContext();
   }
   
-  public List getTotalComposeToList()
+  public List<SelectItem> getTotalComposeToList()
   { 
       if (totalComposeToList == null) {
           initializeComposeToLists();
       }
-
-      List<SelectItem> selectItemList = new ArrayList<SelectItem>();
-      for (MembershipItem item : (List<MembershipItem>) totalComposeToList) {
-          selectItemList.add(new SelectItem(item.getId(), item.getName()));
-      }
-
-      return selectItemList;              
+      return totalComposeToList.stream().map(item->new SelectItem(item.getId(), item.getName())).collect(Collectors.toList());
   }
 
   public List getTotalComposeToBccList() {
       if (totalComposeToBccList == null) {
           initializeComposeToLists();
       }
-
-      List<SelectItem> selectItemList = new ArrayList<SelectItem>();
-      for (MembershipItem item : (List<MembershipItem>) totalComposeToBccList) {
-          selectItemList.add(new SelectItem(item.getId(), item.getName()));
-      }
-
-      return selectItemList;
+      return totalComposeToBccList.stream().map(item->new SelectItem(item.getId(), item.getName())).collect(Collectors.toList());
   }
   
   /**
@@ -755,16 +736,15 @@ public class PrivateMessagesTool
    * totalComposeToList and totalComposeToBccList.
    */
   private void initializeComposeToLists() {
-      totalComposeToList = new ArrayList();
-      totalComposeToBccList = new ArrayList();
+      totalComposeToList = new ArrayList<>();
+      totalComposeToBccList = new ArrayList<>();
       
       List<String> hiddenGroupIds = getHiddenGroupIds(area.getHiddenGroups());
       courseMemberMap = membershipManager.getFilteredCourseMembers(true, getHiddenGroupIds(area.getHiddenGroups()));
-      List members = membershipManager.convertMemberMapToList(courseMemberMap);
+      List<MembershipItem> members = membershipManager.convertMemberMapToList(courseMemberMap);
       
-      List<SelectItem> selectItemList = new ArrayList<SelectItem>();
       // we need to filter out the hidden groups since they will only appear as recipients in the bcc list
-      for (MembershipItem item : (List<MembershipItem>) members) {
+      for (MembershipItem item : members) {
           if (hiddenGroupIds != null && item.getGroup() != null && hiddenGroupIds.contains(item.getGroup().getTitle())) {
               // hidden groups only appear in the bcc list
               totalComposeToBccList.add(item);
@@ -784,15 +764,7 @@ public class PrivateMessagesTool
   }
   
   private List<String> getHiddenGroupIds(Set hiddenGroups){
-	  List<String> returnList = new ArrayList<String>();
-	  
-	  if(hiddenGroups != null){
-		  for(HiddenGroup group : (Set<HiddenGroup>) hiddenGroups ) {
-	    	  returnList.add(group.getGroupId());
-		  }
-	  }
-	  
-	  return returnList;
+    return CollectionUtils.emptyIfNull((Set<HiddenGroup>) hiddenGroups).stream().map(HiddenGroup::getGroupId).collect(Collectors.toList());
   }
   
   /**
@@ -1351,7 +1323,7 @@ public void processChangeSelectView(ValueChangeEvent eve)
 	    	getResourceBundleString("pvt_msg_fwd_label", new Object[] {getDetailMsg().getLabel()}) + "<br />");
 	    
 	    List attachList = getDetailMsg().getAttachList();
-	    if (attachList != null && attachList.size() > 0) {
+	    if (CollectionUtils.isNotEmpty(attachList)) {
 	    	forwardedText.append(getResourceBundleString("pvt_msg_fwd_attachments") + "<br />");
 	    	forwardedText.append("<ul style=\"list-style-type:none;margin:0;padding:0;padding-left:0.5em;\">");
 	    	for (DecoratedAttachment decoAttach : (List<DecoratedAttachment>) attachList ) {
@@ -1452,7 +1424,7 @@ public void processChangeSelectView(ValueChangeEvent eve)
 	    }
 	    
 	    List attachList = getDetailMsg().getAttachList();
-	    if (attachList != null && attachList.size() > 0) {
+	    if (CollectionUtils.isNotEmpty(attachList)) {
 	    	for (DecoratedAttachment decoAttach : (List<DecoratedAttachment>) attachList ) {
 	    		if (decoAttach != null) {
 	    			replyallText.append("<span style=\"font-style:italic;\">");
@@ -1486,7 +1458,7 @@ public void processChangeSelectView(ValueChangeEvent eve)
 	    String[] ccSS = new String[numberofAuther];
 	    ccSS=msgCClistStringwithoutAuthor.split(";");
 	  
-	    StringBuffer tmpCC = new StringBuffer("");
+	    StringBuilder tmpCC = new StringBuilder("");
 	    
 			if((numberofAuther>0)&&(numberofAuther<=msgCClistStringwithoutAuthor.length()))
 					      {
@@ -1495,18 +1467,18 @@ public void processChangeSelectView(ValueChangeEvent eve)
 						    {
 						    	
 						    	
-						    	if(!currentUserasAuther.replaceAll(" ", ", ").equals(msgautherString)){
+						    	if(!currentUserasAuther.replace(" ", ", ").equals(msgautherString)){
 						    		
-							    	if(!ccSS[indexCC].trim().equals(currentUserasAuther.replaceAll(" ", ", "))&&(!ccSS[indexCC].trim().equals(msgautherString)))//not equal current auther and not equal old auther
+							    	if(!ccSS[indexCC].trim().equals(currentUserasAuther.replace(" ", ", "))&&(!ccSS[indexCC].trim().equals(msgautherString)))//not equal current auther and not equal old auther
 							    	{						    		
 							    		tmpCC.append(ccSS[indexCC].trim()).append("; ");
 							    		
 							    	}
 						    	}
 						    	
-						    	else if(currentUserasAuther.replaceAll(" ", ", ").equals(msgautherString)){
+						    	else if(currentUserasAuther.replace(" ", ", ").equals(msgautherString)){
 						    		
-						    		if(!ccSS[indexCC].trim().equals(currentUserasAuther.replaceAll(" ", ", "))||(!ccSS[indexCC].trim().equals(msgautherString)))//not equal current auther and not equal old auther
+						    		if(!ccSS[indexCC].trim().equals(currentUserasAuther.replace(" ", ", "))||(!ccSS[indexCC].trim().equals(msgautherString)))//not equal current auther and not equal old auther
 							    	{						    		
 							    		tmpCC.append(ccSS[indexCC].trim()).append("; ");
 							    		
@@ -1764,7 +1736,7 @@ public void processChangeSelectView(ValueChangeEvent eve)
 	  String currentUser = getUserId();
 	  List<String> userIds = new ArrayList<String>();
 	  for (User user : recipients) {
-		  if(updateCurrentUser || (!updateCurrentUser && !currentUser.equals(user.getId())))
+		  if(updateCurrentUser || (!currentUser.equals(user.getId())))
 			  userIds.add(user.getId());
 	  }
 	  incrementMessagesSynopticToolInfo(userIds, siteId, SynopticMsgcntrManager.NUM_OF_ATTEMPTS);
@@ -1859,8 +1831,8 @@ public void processChangeSelectView(ValueChangeEvent eve)
       
       // Add the recipientList as String for display in Sent folder
       // Any hidden users will be tacked on at the end
-      StringBuffer sendToString = new StringBuffer("");
-      StringBuffer sendToHiddenString = new StringBuffer("");
+      StringBuilder sendToString = new StringBuilder("");
+      StringBuilder sendToHiddenString = new StringBuilder("");
       
       if (selectedComposeToList.size() == 1) {
           MembershipItem membershipItem = (MembershipItem) courseMemberMap.get(selectedComposeToList.get(0));
@@ -1885,14 +1857,13 @@ public void processChangeSelectView(ValueChangeEvent eve)
       }
       
       //add bcc recipients place holder:
-      if(selectedComposeBccList.size() > 0 && !sendToString.toString().contains(getResourceBundleString(RECIPIENTS_UNDISCLOSED))){
+      if(CollectionUtils.isNotEmpty(selectedComposeBccList) && !sendToString.toString().contains(getResourceBundleString(RECIPIENTS_UNDISCLOSED))){
     	  sendToString.append(getResourceBundleString(RECIPIENTS_UNDISCLOSED)).append("; ");
       }
 
-
       //create bcc string to use to display the user's who got BCC'ed
-      StringBuffer sendToBccString = new StringBuffer("");
-      StringBuffer sendToBccHiddenString = new StringBuffer("");      
+      StringBuilder sendToBccString = new StringBuilder("");
+      StringBuilder sendToBccHiddenString = new StringBuilder("");
       for (int i = 0; i < selectedComposeBccList.size(); i++)
       {
     	  MembershipItem membershipItem = (MembershipItem) courseMemberMap.get(selectedComposeBccList.get(i));  
@@ -2093,7 +2064,7 @@ public void processChangeSelectView(ValueChangeEvent eve)
   {
     for (int i = 0; i < pvtTopics.size(); i++)
     {
-      Topic el = (Topic)pvtTopics.get(i);
+      Topic el = pvtTopics.get(i);
       if(el.getTitle().equals(msgNavMode))
       {
         setSelectedTopic(new PrivateTopicDecoratedBean(el)) ;
@@ -2107,7 +2078,7 @@ public void processChangeSelectView(ValueChangeEvent eve)
           else
           {
             getSelectedTopic().setHasNextTopic(true) ;
-            Topic nt=(Topic)pvtTopics.get(i+1);
+            Topic nt=pvtTopics.get(i+1);
             if (nt != null)
             {
               //getSelectedTopic().setNextTopicId(nt.getUuid());
@@ -2120,7 +2091,7 @@ public void processChangeSelectView(ValueChangeEvent eve)
           getSelectedTopic().setHasPreviousTopic(true);
           getSelectedTopic().setHasNextTopic(false) ;
           
-          Topic pt=(Topic)pvtTopics.get(i-1);
+          Topic pt=pvtTopics.get(i-1);
           if (pt != null)
           {
             //getSelectedTopic().setPreviousTopicId(pt.getUuid());
@@ -2132,13 +2103,13 @@ public void processChangeSelectView(ValueChangeEvent eve)
           getSelectedTopic().setHasNextTopic(true) ;
           getSelectedTopic().setHasPreviousTopic(true);
           
-          Topic nt=(Topic)pvtTopics.get(i+1);
+          Topic nt=pvtTopics.get(i+1);
           if (nt != null)
           {
             //getSelectedTopic().setNextTopicId(nt.getUuid());
             getSelectedTopic().setNextTopicTitle(nt.getTitle());
           }
-          Topic pt=(Topic)pvtTopics.get(i-1);
+          Topic pt=pvtTopics.get(i-1);
           if (pt != null)
           {
             //getSelectedTopic().setPreviousTopicId(pt.getUuid());
@@ -2253,7 +2224,7 @@ public void processChangeSelectView(ValueChangeEvent eve)
     }
     return SELECTED_MESSAGE_PG;
   }
-  
+
   //////////////////////REPLY SEND  /////////////////
   public String processPvtMsgPreviewReply(){
 	  PrivateMessage pvtMsg = getPvtMsgReplyMessage(getDetailMsg().getMsg(), false);
@@ -2325,7 +2296,7 @@ public void processChangeSelectView(ValueChangeEvent eve)
     
     	//PrivateMessage currentMessage = getDetailMsg().getMsg() ;
     	//by default add user who sent original message    
-    	for (MembershipItem membershipItem : (List<MembershipItem>) totalComposeToList) {
+    	for (MembershipItem membershipItem : totalComposeToList) {
     		if (membershipItem.getUser() != null && membershipItem.getUser().getId().equals(currentMessage.getCreatedBy())) {
     			selectedComposeToList.add(membershipItem.getId());
     		}
@@ -2342,7 +2313,7 @@ public void processChangeSelectView(ValueChangeEvent eve)
     		return null ;
     	}
     	if(!isDraft){
-    		if(selectedComposeToList.size()<1 && selectedComposeBccList.size() < 1)
+    		if(selectedComposeToList.isEmpty() && selectedComposeBccList.isEmpty())
     		{
     			setErrorMessage(getResourceBundleString(SELECT_RECIPIENT_LIST_FOR_REPLY));
     			return null ;
@@ -2368,8 +2339,8 @@ public void processChangeSelectView(ValueChangeEvent eve)
     	// Since some users may be hidden, if some of these are recipients
     	// filter them out (already checked if no recipients)
     	// if only 1 recipient no need to check visibility
-    	StringBuffer sendToString = new StringBuffer("");
-    	StringBuffer sendToHiddenString = new StringBuffer("");
+    	StringBuilder sendToString = new StringBuilder("");
+    	StringBuilder sendToHiddenString = new StringBuilder("");
 
     	if (selectedComposeToList.size() == 1) {
     		MembershipItem membershipItem = (MembershipItem) courseMemberMap.get(selectedComposeToList.get(0));
@@ -2400,8 +2371,8 @@ public void processChangeSelectView(ValueChangeEvent eve)
     	}
 
     	//create sendToBccString
-    	StringBuffer sendToBccString = new StringBuffer("");
-    	StringBuffer sendToBccHiddenString = new StringBuffer("");
+    	StringBuilder sendToBccString = new StringBuilder("");
+    	StringBuilder sendToBccHiddenString = new StringBuilder("");
     	for (int i = 0; i < selectedComposeBccList.size(); i++)
     	{
     		MembershipItem membershipItem = (MembershipItem) courseMemberMap.get(selectedComposeBccList.get(i));
@@ -2557,8 +2528,8 @@ public void processChangeSelectView(ValueChangeEvent eve)
     	// Since some users may be hidden, if some of these are recipients
     	// filter them out (already checked if no recipients)
     	// if only 1 recipient no need to check visibility
-    	StringBuffer sendToString = new StringBuffer();
-    	StringBuffer sendToHiddenString = new StringBuffer();
+    	StringBuilder sendToString = new StringBuilder();
+    	StringBuilder sendToHiddenString = new StringBuilder();
 
     	if (selectedComposeToList.size() == 1) {
     		MembershipItem membershipItem = (MembershipItem) courseMemberMap.get(selectedComposeToList.get(0));
@@ -2588,8 +2559,8 @@ public void processChangeSelectView(ValueChangeEvent eve)
     		sendToString.append(getResourceBundleString(RECIPIENTS_UNDISCLOSED)).append("; ");
     	}
 
-    	StringBuffer sendToBccString = new StringBuffer();
-    	StringBuffer sendToBccHiddenString = new StringBuffer();
+    	StringBuilder sendToBccString = new StringBuilder();
+    	StringBuilder sendToBccHiddenString = new StringBuilder();
     	for (int i = 0; i < selectedComposeBccList.size(); i++)
     	{
     		MembershipItem membershipItem = (MembershipItem) courseMemberMap.get(selectedComposeBccList.get(i));
@@ -2776,15 +2747,14 @@ public void processChangeSelectView(ValueChangeEvent eve)
 	  
 	  List tmpRecipList = currentMessage.getRecipients();
 
-	  Map<User, Boolean> returnSet = new HashMap<User, Boolean>();
-	  StringBuffer sendToStringreplyall = new StringBuffer();
+	  Map<User, Boolean> returnSet = new HashMap<>();
+	  StringBuilder sendToStringreplyall = new StringBuilder();
 
 	  for (PrivateMessageRecipient tmpPMR : (List<PrivateMessageRecipient>) tmpRecipList) {
 		  User replyrecipientaddtmp=null;
 		  try {
 			  replyrecipientaddtmp = userDirectoryService.getUser(tmpPMR.getUserId());
 		  } catch (UserNotDefinedException e) {
-			  // TODO Auto-generated catch block
 			  log.warn("Unable to find user : " + tmpPMR.getUserId(), e);
 		  }
 
@@ -2817,8 +2787,8 @@ public void processChangeSelectView(ValueChangeEvent eve)
 	  // Since some users may be hidden, if some of these are recipients
 	  // filter them out (already checked if no recipients)
 	  // if only 1 recipient no need to check visibility
-	  StringBuffer sendToString = new StringBuffer(sendToStringreplyall);
-	  StringBuffer sendToHiddenString = new StringBuffer();
+	  StringBuilder sendToString = new StringBuilder(sendToStringreplyall);
+	  StringBuilder sendToHiddenString = new StringBuilder();
 
 	  if (selectedComposeToList.size() == 1) {
 		  MembershipItem membershipItem = (MembershipItem) courseMemberMap.get(selectedComposeToList.get(0));
@@ -2851,8 +2821,8 @@ public void processChangeSelectView(ValueChangeEvent eve)
 	  }
 
 	  //create sendToBccString
-	  StringBuffer sendToBccString = new StringBuffer();
-	  StringBuffer sendToBccHiddenString = new StringBuffer();
+	  StringBuilder sendToBccString = new StringBuilder();
+	  StringBuilder sendToBccHiddenString = new StringBuilder();
 	  for (int i = 0; i < selectedComposeBccList.size(); i++)
 	  {
 		  MembershipItem membershipItem = (MembershipItem) courseMemberMap.get(selectedComposeBccList.get(i));
@@ -2927,10 +2897,10 @@ public void processChangeSelectView(ValueChangeEvent eve)
   }
 
 
-  
-  
+
+
  private boolean containedInList(User user,List list){
-	 
+
 	boolean isContain=false;
 	 if (list==null)
 	 {
@@ -2945,13 +2915,13 @@ public void processChangeSelectView(ValueChangeEvent eve)
 				} catch (UserNotDefinedException e) {
 					log.error(e.getMessage(), e);
 				}
-		   
-		 
-		   
+
+
+
 		   if((replyrecipientaddtmp!=null)&&(replyrecipientaddtmp==user)){
 			   //tmplist.add(tmpPMR);
 			   isContain=true;
-			   
+
 		   }
 	   }
 	   return isContain;
@@ -2988,7 +2958,7 @@ public void processChangeSelectView(ValueChangeEvent eve)
       }
     }
     this.setSelectedDeleteItems(delSelLs);
-    if(delSelLs.size()<1)
+    if(delSelLs.isEmpty())
     {
       setErrorMessage(getResourceBundleString(SELECT_MSGS_TO_DELETE));
       return null;  //stay in the same page if nothing is selected for delete
@@ -3012,7 +2982,7 @@ public void processChangeSelectView(ValueChangeEvent eve)
         prtMsgManager.deletePrivateMessage(element, getPrivateMessageTypeFromContext(msgNavMode)) ;        
       }      
       
-      if ("pvt_deleted".equals(msgNavMode))
+      if (PVTMSG_MODE_DELETE.equals(msgNavMode))
     	  eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_MESSAGES_REMOVE, getEventMessage((Message) element), false));
       else
     	  eventTrackingService.post(eventTrackingService.newEvent(DiscussionForumService.EVENT_MESSAGES_MOVE_TO_DELETED_FOLDER, getEventMessage((Message) element), false));
@@ -3021,7 +2991,7 @@ public void processChangeSelectView(ValueChangeEvent eve)
     
     if (deleted)
     {
-    	if ("pvt_deleted".equals(msgNavMode))
+    	if (PVTMSG_MODE_DELETE.equals(msgNavMode))
     		multiDeleteSuccessMsg = getResourceBundleString(PERM_DELETE_SUCCESS_MSG);
     	else
     		multiDeleteSuccessMsg = getResourceBundleString(MULTIDELETE_SUCCESS_MSG);
@@ -3066,7 +3036,6 @@ public void processChangeSelectView(ValueChangeEvent eve)
   
   private String removeAttachId = null;
   private ArrayList prepareRemoveAttach = new ArrayList();
-  private boolean attachCaneled = false;
   private ArrayList oldAttachments = new ArrayList();
   private List allAttachments = new ArrayList();
 
@@ -3384,9 +3353,9 @@ public void processChangeSelectView(ValueChangeEvent eve)
   public String processPvtMsgFolderSettings() {
     log.debug("processPvtMsgFolderSettings()");
     //String topicTitle= getExternalParameterByKey("pvtMsgTopicTitle");
-    String topicTitle = forumManager.getTopicByUuid(getExternalParameterByKey("pvtMsgTopicId")).getTitle();
+    String topicTitle = forumManager.getTopicByUuid(getExternalParameterByKey(EXTERNAL_TOPIC_ID)).getTitle();
     setSelectedTopicTitle(topicTitle) ;
-    String topicId=getExternalParameterByKey("pvtMsgTopicId") ;
+    String topicId=getExternalParameterByKey(EXTERNAL_TOPIC_ID) ;
     setSelectedTopicId(topicId);
     
     setFromMainOrHp();
@@ -3902,7 +3871,7 @@ public void processChangeSelectView(ValueChangeEvent eve)
    */
   private Map<User, Boolean> getRecipients()
   {     
-	  Map<User, Boolean> returnSet = new HashMap<User, Boolean>();
+	  Map<User, Boolean> returnSet = new HashMap<>();
     
     /** get List of unfiltered course members */
     List allCourseUsers = membershipManager.getAllCourseUsers();    
@@ -3929,7 +3898,7 @@ public void processChangeSelectView(ValueChangeEvent eve)
 
   private Map<User, Boolean> getRecipientsHelper(List selectedList, List allCourseUsers, boolean bcc){
 
-	  Map<User, Boolean>  returnSet = new HashMap<User, Boolean>();
+	  Map<User, Boolean>  returnSet = new HashMap<>();
 
 	  for (String selectedItem : (List<String>) selectedList){
 
@@ -4332,7 +4301,7 @@ public void processChangeSelectView(ValueChangeEvent eve)
 			// Set permission descriptions
 			if (toolSession != null) {
 				ResourceLoader pRb = new ResourceLoader(PERMISSIONS_BUNDLE);
-				HashMap<String, String> pRbValues = new HashMap<String, String>();
+				HashMap<String, String> pRbValues = new HashMap<>();
 				for (Iterator<Entry<String, String>> iEntries = pRb.entrySet().iterator();iEntries.hasNext();)
 				{
 					Entry<String, String> entry = iEntries.next();
@@ -4449,15 +4418,15 @@ public void processChangeSelectView(ValueChangeEvent eve)
 	}
 	
 	public List<SelectItem> getNonHiddenGroups(){
-		nonHiddenGroups = new ArrayList<SelectItem>();
+		List<SelectItem> nonHiddenGroups = new ArrayList<>();
 		nonHiddenGroups.add(new SelectItem(DEFAULT_NON_HIDDEN_GROUP_ID, getResourceBundleString(DEFAULT_NON_HIDDEN_GROUP_TITLE)));
 		
 		Site currentSite = getCurrentSite();   
 		if(currentSite.hasGroups()){
 	      
-			Collection groups = currentSite.getGroups();
+			Collection<Group> groups = currentSite.getGroups();
 
-			groups = sortGroups(groups);
+			sortGroups(groups);
 
 			for (Group currentGroup : (List<Group>) groups) {
 				if(!isGroupHidden(currentGroup.getTitle())){
@@ -4496,8 +4465,8 @@ public void processChangeSelectView(ValueChangeEvent eve)
 	   * @return
 	   * 		Collection of groups in sorted order
 	   */
-	  private Collection sortGroups(Collection groups) {
-		  List sortGroupsList = new ArrayList();
+	  private Collection<Group> sortGroups(Collection<Group> groups) {
+		  List<Group> sortGroupsList = new ArrayList<>();
 
 		  sortGroupsList.addAll(groups);
 		  
@@ -4551,10 +4520,10 @@ public void processChangeSelectView(ValueChangeEvent eve)
         String url = ServerConfigurationService.getPortalUrl();
         LRS_Verb verb = new LRS_Verb(SAKAI_VERB.interacted);
         LRS_Object lrsObject = new LRS_Object(url + "/privateMessage", "read-private-message");
-        HashMap<String, String> nameMap = new HashMap<String, String>();
+        HashMap<String, String> nameMap = new HashMap<>();
         nameMap.put("en-US", "User read a private message");
         lrsObject.setActivityName(nameMap);
-        HashMap<String, String> descMap = new HashMap<String, String>();
+        HashMap<String, String> descMap = new HashMap<>();
         descMap.put("en-US", "User read a private message with subject: " + subject);
         lrsObject.setDescription(descMap);
         return new LRS_Statement(student, verb, lrsObject);
@@ -4565,10 +4534,10 @@ public void processChangeSelectView(ValueChangeEvent eve)
         String url = ServerConfigurationService.getPortalUrl();
         LRS_Verb verb = new LRS_Verb(sakaiVerb);
         LRS_Object lrsObject = new LRS_Object(url + "/privateMessage", "send-private-message");
-        HashMap<String, String> nameMap = new HashMap<String, String>();
+        HashMap<String, String> nameMap = new HashMap<>();
         nameMap.put("en-US", "User sent a private message");
         lrsObject.setActivityName(nameMap);
-        HashMap<String, String> descMap = new HashMap<String, String>();
+        HashMap<String, String> descMap = new HashMap<>();
         descMap.put("en-US", "User sent a private message with subject: " + subject);
         lrsObject.setDescription(descMap);
         return new LRS_Statement(student, verb, lrsObject);
@@ -4578,15 +4547,18 @@ public void processChangeSelectView(ValueChangeEvent eve)
       return FileUtils.byteCountToDisplaySize(Long.parseLong(attachmentSize));
     }
 
-    public String getGroupByUserId(final String userId) {
-      initializeComposeToLists();
-      final List<MembershipItem> lista = (List<MembershipItem>) totalComposeToList;
-            return lista.stream()
+    public String getRolAndGroupsByUserId(final String userId) {
+      if (totalComposeToList == null) {
+        initializeComposeToLists();
+      }
+      final String role = authzGroupService.getUserRole(userId, siteService.siteReference(getCurrentSite().getId()));
+      final String groups = totalComposeToList.stream()
                     .filter(item -> (item.getGroup() != null && item.getGroup().getMembers().stream()
                             .anyMatch(member -> member.getUserId().equals(userId))))
 		            .filter(item -> (item.getGroup() != null && item.getGroup().getMembers().stream()
                             .anyMatch(member -> member.getUserId().equals(getUserId()))))
                     .map(item->item.getGroup().getDescription())
                     .collect(Collectors.joining(", "));
+      return "(" + role + ") " + groups;
   }
 }

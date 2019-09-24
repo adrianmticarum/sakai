@@ -195,8 +195,8 @@
 		    <f:facet name="header">
 		          <h:outputLink value="#" onclick="return false;"><h:outputText value="#{msgs.pvt_group}"/></h:outputLink>
 		      </f:facet>
-		      <h:outputText value="#{PrivateMessagesTool.getGroupByUserId(rcvdItems.msg.authorId)}" rendered="#{rcvdItems.hasRead}"/>
-		      <h:outputText styleClass="unreadMsg" value="#{PrivateMessagesTool.getGroupByUserId(rcvdItems.msg.authorId)}" rendered="#{!rcvdItems.hasRead}"/>
+		      <h:outputText value="#{PrivateMessagesTool.getRolAndGroupsByUserId(rcvdItems.msg.authorId)}" rendered="#{rcvdItems.hasRead}"/>
+		      <h:outputText styleClass="unreadMsg" value="#{PrivateMessagesTool.getRolAndGroupsByUserId(rcvdItems.msg.authorId)}" rendered="#{!rcvdItems.hasRead}"/>
 		  </h:column>
 
 		  <h:column>
@@ -276,14 +276,7 @@
 		     <h:outputText value="#{rcvdItems.msg.author}" rendered="#{rcvdItems.hasRead}"/>
 		     <h:outputText styleClass="unreadMsg" value="#{rcvdItems.msg.author}" rendered="#{!rcvdItems.hasRead}"/>
 		  </h:column>
-		  <h:column>
-		    <f:facet name="header">
-		        <h:outputLink value="#" onclick="return false;"><h:outputText value="#{msgs.pvt_group}"/></h:outputLink>
-		    </f:facet>
-		    <h:outputText value="#{PrivateMessagesTool.getGroupByUserId(rcvdItems.msg.authorId)}" rendered="#{rcvdItems.hasRead}"/>
-		    <h:outputText styleClass="unreadMsg" value="#{PrivateMessagesTool.getGroupByUserId(rcvdItems.msg.authorId)}" rendered="#{!rcvdItems.hasRead}"/>
-		  </h:column>
-		  <h:column rendered="#{PrivateMessagesTool.selectedTopic.topic.title != 'pvt_received' && 
+		  <h:column rendered="#{PrivateMessagesTool.selectedTopic.topic.title != 'pvt_received' &&
 		  PrivateMessagesTool.selectedTopic.topic.title != 'pvt_drafts' &&
 		  PrivateMessagesTool.selectedTopic.topic.title != 'pvt_deleted' }">
 		    <f:facet name="header">
@@ -291,6 +284,13 @@
 		    </f:facet>
 		     <h:outputText value="#{rcvdItems.sendToStringDecorated}" rendered="#{rcvdItems.hasRead}"/>
 		     <h:outputText styleClass="unreadMsg" value="#{rcvdItems.sendToStringDecorated}" rendered="#{!rcvdItems.hasRead}"/>
+		  </h:column>
+		  <h:column>
+			  <f:facet name="header">
+				  <h:outputLink value="#" onclick="return false;"><h:outputText value="#{msgs.pvt_group}"/></h:outputLink>
+			  </f:facet>
+			  <h:outputText value="#{PrivateMessagesTool.getRolAndGroupsByUserId(rcvdItems.msg.authorId)}" rendered="#{rcvdItems.hasRead}"/>
+			  <h:outputText styleClass="unreadMsg" value="#{PrivateMessagesTool.getRolAndGroupsByUserId(rcvdItems.msg.authorId)}" rendered="#{!rcvdItems.hasRead}"/>
 		  </h:column>
 		  <h:column>
 		    <f:facet name="header">
