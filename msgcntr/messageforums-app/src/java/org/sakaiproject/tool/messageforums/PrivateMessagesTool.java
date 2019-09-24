@@ -4581,12 +4581,12 @@ public void processChangeSelectView(ValueChangeEvent eve)
     public String getGroupByUserId(final String userId) {
       initializeComposeToLists();
       final List<MembershipItem> lista = (List<MembershipItem>) totalComposeToList;
-      final List<MembershipItem> listaGrupos =
-            lista.stream().filter(item -> (item.getGroup() != null && item.getGroup().getMembers().stream().anyMatch(member -> member.getUserId().equals(userId)))).collect(Collectors.toList());
-      if (CollectionUtils.isNotEmpty(listaGrupos)) {
-        MembershipItem grupo = listaGrupos.get(0);
-        return grupo.getGroup().getDescription();
-      }
-      return "Grupo Desconocido";
+            return lista.stream()
+                    .filter(item -> (item.getGroup() != null && item.getGroup().getMembers().stream()
+                            .anyMatch(member -> member.getUserId().equals(userId))))
+		            .filter(item -> (item.getGroup() != null && item.getGroup().getMembers().stream()
+                            .anyMatch(member -> member.getUserId().equals(getUserId()))))
+                    .map(item->item.getGroup().getDescription())
+                    .collect(Collectors.joining(", "));
   }
 }

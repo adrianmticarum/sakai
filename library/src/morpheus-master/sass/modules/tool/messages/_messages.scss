@@ -80,9 +80,7 @@
  	}
  	
  	#prefs_pvt_form{
- 		&\:pvtmsgs{
- 			max-width: 1200px;
- 			
+ 		&\:pvtmsgs, &\:threaded_pvtmsgs{
  			th{
  				min-width: 32px;
  			}
@@ -96,16 +94,19 @@
  				width: 1%;
  			}
   			td.specialLink{
- 				width: 25%;
+ 				width: 20%;
  			}
   			td.created{
- 				width: 25%;
+ 				width: 20%;
  			}
+			td.group{
+				width: 15%;
+			}
   			td.date{
- 				width: 18%;
+ 				width: 17%;
  			}
   			td.bogus{
- 				width: 17%;
+ 				width: 16%;
  			}
  		}
  	}
