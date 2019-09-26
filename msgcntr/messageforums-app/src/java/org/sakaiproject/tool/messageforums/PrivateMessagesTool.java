@@ -20,52 +20,14 @@
  **********************************************************************************/
 package org.sakaiproject.tool.messageforums;
 
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TimeZone;
-import java.util.stream.Collectors;
-
-import javax.faces.application.FacesMessage;
-import javax.faces.context.ExternalContext;
-import javax.faces.context.FacesContext;
-import javax.faces.event.ValueChangeEvent;
-import javax.faces.model.SelectItem;
-import javax.servlet.http.HttpServletRequest;
-
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.validator.routines.EmailValidator;
-import org.sakaiproject.api.app.messageforums.Area;
-import org.sakaiproject.api.app.messageforums.Attachment;
-import org.sakaiproject.api.app.messageforums.DefaultPermissionsManager;
-import org.sakaiproject.api.app.messageforums.DiscussionForumService;
-import org.sakaiproject.api.app.messageforums.HiddenGroup;
-import org.sakaiproject.api.app.messageforums.MembershipManager;
-import org.sakaiproject.api.app.messageforums.Message;
-import org.sakaiproject.api.app.messageforums.MessageForumsForumManager;
-import org.sakaiproject.api.app.messageforums.MessageForumsMessageManager;
-import org.sakaiproject.api.app.messageforums.MessageForumsTypeManager;
-import org.sakaiproject.api.app.messageforums.PrivateForum;
-import org.sakaiproject.api.app.messageforums.PrivateMessage;
-import org.sakaiproject.api.app.messageforums.PrivateMessageRecipient;
-import org.sakaiproject.api.app.messageforums.PrivateTopic;
-import org.sakaiproject.api.app.messageforums.SynopticMsgcntrManager;
-import org.sakaiproject.api.app.messageforums.Topic;
-import org.sakaiproject.api.app.messageforums.UserPreferencesManager;
+import org.sakaiproject.api.app.messageforums.*;
 import org.sakaiproject.api.app.messageforums.ui.PrivateMessageManager;
 import org.sakaiproject.authz.api.AuthzGroupService;
 import org.sakaiproject.authz.api.Member;
@@ -73,6 +35,7 @@ import org.sakaiproject.authz.api.PermissionsHelper;
 import org.sakaiproject.authz.api.SecurityService;
 import org.sakaiproject.component.app.messageforums.MembershipItem;
 import org.sakaiproject.component.app.messageforums.dao.hibernate.HiddenGroupImpl;
+import org.sakaiproject.component.app.messageforums.dao.hibernate.PrivateMessageRecipientImpl;
 import org.sakaiproject.component.app.messageforums.dao.hibernate.PrivateTopicImpl;
 import org.sakaiproject.component.cover.ServerConfigurationService;
 import org.sakaiproject.content.api.ContentHostingService;
@@ -94,8 +57,8 @@ import org.sakaiproject.site.api.SiteService;
 import org.sakaiproject.time.api.UserTimeService;
 import org.sakaiproject.tool.api.Session;
 import org.sakaiproject.tool.api.SessionManager;
-import org.sakaiproject.tool.api.ToolSession;
 import org.sakaiproject.tool.api.ToolManager;
+import org.sakaiproject.tool.api.ToolSession;
 import org.sakaiproject.tool.messageforums.ui.DecoratedAttachment;
 import org.sakaiproject.tool.messageforums.ui.PrivateForumDecoratedBean;
 import org.sakaiproject.tool.messageforums.ui.PrivateMessageDecoratedBean;
@@ -109,9 +72,18 @@ import org.sakaiproject.util.ResourceLoader;
 import org.sakaiproject.util.Validator;
 import org.springframework.orm.hibernate4.HibernateOptimisticLockingFailureException;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
+import javax.faces.application.FacesMessage;
+import javax.faces.context.ExternalContext;
+import javax.faces.context.FacesContext;
+import javax.faces.event.ValueChangeEvent;
+import javax.faces.model.SelectItem;
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class PrivateMessagesTool
@@ -4560,5 +4532,26 @@ public void processChangeSelectView(ValueChangeEvent eve)
                     .map(item->item.getGroup().getDescription())
                     .collect(Collectors.joining(", "));
       return "(" + role + ") " + groups;
-  }
+    }
+
+    public String getRolAndGroups(final List<PrivateMessageRecipientImpl> recipients) {
+      final List<PrivateMessageRecipientImpl> recipientsFilterred =
+              recipients.stream().filter(Objects::nonNull).collect(Collectors.toList());
+      if(recipientsFilterred.size() > 1){
+        return "No aplica";
+      }
+      if (totalComposeToList == null) {
+        initializeComposeToLists();
+      }
+      final String userId = recipientsFilterred.get(0).getUserId();
+      final String role = authzGroupService.getUserRole(userId, siteService.siteReference(getCurrentSite().getId()));
+      final String groups = totalComposeToList.stream()
+              .filter(item -> (item.getGroup() != null && item.getGroup().getMembers().stream()
+                      .anyMatch(member -> member.getUserId().equals(userId))))
+              .filter(item -> (item.getGroup() != null && item.getGroup().getMembers().stream()
+                      .anyMatch(member -> member.getUserId().equals(getUserId()))))
+              .map(item->item.getGroup().getDescription())
+              .collect(Collectors.joining(", "));
+      return "(" + role + ") " + groups;
+    }
 }
